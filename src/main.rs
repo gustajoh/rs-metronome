@@ -1,5 +1,6 @@
 use iced::Application;
 mod gui;
+mod metronome;
 
 fn main() -> iced::Result {
     let settings = iced::Settings {

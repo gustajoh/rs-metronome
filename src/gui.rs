@@ -1,7 +1,7 @@
 use iced::{Application, Command, executor, Element, Theme};
 use iced::widget::{Button, Slider, Text, Column, Container};
 use iced::alignment;
-
+use crate::metronome::Metronome;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -12,6 +12,7 @@ pub enum Message {
 pub struct MetronomeApp {
     bpm: u32,
     is_running: bool,
+    metronome: Option<Metronome>,
 }
 
 impl Application for MetronomeApp {
@@ -25,6 +26,7 @@ impl Application for MetronomeApp {
             Self {
                 bpm: 120,
                 is_running: false,
+                metronome: None,
             },
             Command::none(),
         )
@@ -40,13 +42,21 @@ impl Application for MetronomeApp {
                 self.bpm = new_bpm;
             }
             Message::ToggleMetronome => {
-                self.is_running = !self.is_running;
                 if self.is_running {
-                    println!("Start metronome at {} BPM", self.bpm);
-                    // TODO: Start ticking audio
+                    if let Some(metro) = self.metronome.take() {
+                        metro.stop()
+                    }
+                    self.is_running = false;
                 } else {
-                    println!("Stop metronome");
-                    // TODO: Stop ticking audio
+                    match Metronome::start(self.bpm) {
+                        Ok(metro) => {
+                            self.metronome = Some(metro);
+                            self.is_running = true;
+                        }
+                        Err(e) => {
+                            println!("Failed to start metronome: {:?}", e)
+                        }
+                    }
                 }
             }
         }
