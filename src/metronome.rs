@@ -1,26 +1,33 @@
 use anyhow::Result;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::{
-    sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex},
+    sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Arc, Mutex},
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
+use crate::gui::TimeSignature;
 
 struct MetronomeState {
     next_tick_time: Instant,
     interval: Duration,
     playing_tick: bool,
     tick_sample_pos: usize,
+    beat_index: usize,
+    beats_per_measure: usize,
+    shared_beat_index: Arc<AtomicUsize>,
 }
 
 impl MetronomeState {
-    fn new(bpm: f32) -> Self {
-        let interval = Duration::from_secs_f32(60.0 / bpm);
+    fn new(bpm: f32, time_sig: TimeSignature, shared_beat_index: Arc<AtomicUsize>) -> Self {
+        let interval = Duration::from_secs_f32((60.0 / bpm) * (4.0/time_sig.bottom as f32));
         Self {
             next_tick_time: Instant::now() + interval,
             interval,
             playing_tick: false,
             tick_sample_pos: 0,
+            beat_index: 0,
+            beats_per_measure: time_sig.top as usize,
+            shared_beat_index,
         }
     }
 
@@ -39,21 +46,28 @@ pub struct Metronome {
 }
 
 impl Metronome {
-    pub fn start(bpm: u32) -> Result<Self> {
+    pub fn start(bpm: u32, time_sig: TimeSignature) -> Result<(Self, Arc<AtomicUsize>)> {
         let stop_flag = Arc::new(AtomicBool::new(false));
         let stop_flag_clone = stop_flag.clone();
-
+    
+        let beat_index_shared = Arc::new(AtomicUsize::new(0)); // ✅ MOVE THIS UP HERE
+    
+        let beat_index_for_thread = beat_index_shared.clone(); // so thread gets its own copy
+    
         let handle = thread::spawn(move || {
             let host = cpal::default_host();
             let device = host.default_output_device().expect("No output device");
             let config = device.default_output_config().unwrap().config();
-
+    
             let sample_rate = config.sample_rate.0 as f32;
-            let tick_freq = 432.0; // Hz
-            let tick_duration = 0.05; // 50ms
-
-            let state = Arc::new(Mutex::new(MetronomeState::new(bpm as f32)));
-
+            let tick_duration = 0.05;
+    
+            let state = Arc::new(Mutex::new(MetronomeState::new(
+                bpm as f32,
+                time_sig,
+                beat_index_for_thread, // ✅ cloned version for thread
+            )));
+    
             let stream = device.build_output_stream(
                 &config,
                 {
@@ -61,17 +75,20 @@ impl Metronome {
                     move |data: &mut [f32], _| {
                         let now = Instant::now();
                         let mut metro = state.lock().unwrap();
-
+    
                         metro.check_and_trigger_tick(now);
-
+    
                         for sample in data.iter_mut() {
                             if metro.playing_tick {
+                                let tick_freq = if metro.beat_index == 0 { 880.0 } else { 432.0 };
                                 let t = metro.tick_sample_pos as f32 / sample_rate;
-                                *sample = (2.0 * std::f32::consts::PI * tick_freq * t).sin() * 0.5;
+                                *sample = (2.0 * std::f32::consts::PI * tick_freq * t).sin() * 0.05;
                                 metro.tick_sample_pos += 1;
-
+    
                                 if (metro.tick_sample_pos as f32) / sample_rate > tick_duration {
                                     metro.playing_tick = false;
+                                    metro.shared_beat_index.store(metro.beat_index, Ordering::Relaxed);
+                                    metro.beat_index = (metro.beat_index + 1) % metro.beats_per_measure;
                                 }
                             } else {
                                 *sample = 0.0;
@@ -82,22 +99,26 @@ impl Metronome {
                 |err| eprintln!("Stream error: {:?}", err),
                 None,
             ).unwrap();
-
+    
             stream.play().unwrap();
-
+    
             while !stop_flag_clone.load(Ordering::Relaxed) {
                 thread::sleep(Duration::from_millis(100));
             }
-
-            drop(stream); // stops the stream
+    
+            drop(stream);
             println!("Metronome stopped.");
         });
-
-        Ok(Self {
-            stop_flag,
-            handle: Some(handle),
-        })
+    
+        Ok((
+            Self {
+                stop_flag,
+                handle: Some(handle),
+            },
+            beat_index_shared, // ✅ now it’s in scope
+        ))
     }
+    
 
     pub fn stop(self) {
         self.stop_flag.store(true, Ordering::Relaxed);
