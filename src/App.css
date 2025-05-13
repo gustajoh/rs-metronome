@@ -125,13 +125,20 @@ button {
   flex: auto;
   justify-items: center;
 }
-.volume-component {
-  margin-left: 1rem;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 0.5rem;
+
+.tick-col {
+  width: 30px;
 }
+
+.separator {
+  height: none;
+  width: 30%;
+}
+
+.separator:nth-child(4n + 1) {
+  width: 50%;
+}
+
 .volume-slider {
   width: 100%;
   max-width: 7rem;
@@ -143,4 +150,14 @@ button {
 
 .vol-tooltip > .tooltip-inner {
   max-width: none;
+}
+
+.digital-component {
+  display: inline-block;
+  padding: 0.25rem 1.25rem;
+  background: #111;
+  border: 2px solid #444;
+  border-radius: 0.5rem;
+  box-shadow: 0 0 10px rgba(170, 74, 170, 0.4);
+  font-family: monospace;
 }

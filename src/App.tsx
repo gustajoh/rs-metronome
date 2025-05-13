@@ -9,10 +9,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { TimeSignature } from "./types/timesignature";
 import { listen } from "@tauri-apps/api/event";
 import { Knob, Arc, Pointer, Value, Scale } from "rc-knob";
-import { Slider } from "primereact/slider";
-import { Tooltip } from "primereact/tooltip";
+//import { Slider } from "primereact/slider";
 import { Dropdown } from "primereact/dropdown";
-import { DigitalDisplay } from "./DigitalDisplay";
+import DigitalNumber from "react-digital-number/dist/index.js";
+import Slider from "@mui/material/Slider";
 
 function App() {
   const [bpm, setBpm] = useState(120);
@@ -20,6 +20,8 @@ function App() {
   const [timeSig, setTimeSig] = useState<TimeSignature>({ top: 4, bottom: 4 });
   const [started, isStarted] = useState(false);
   const [beatIndex, setIndex] = useState(0);
+
+  const allTicks = Array.from({ length: 21 }, (_, i) => 100 - i * 5);
 
   const TIME_SIGNATURES: TimeSignature[] = [
     { top: 2, bottom: 4 },
@@ -80,25 +82,40 @@ function App() {
   }, [volume, bpm, timeSig]);
 
   return (
-    <main className="container w-full">
-      <div className="flex flex-row w-full justify-center gap-4">
-        <div className="volume-component flex flex-row align-content-start w-4">
-          <Tooltip
-            className="vol-tooltip flex sm"
-            target=".volume-slider>.p-slider-handle"
-            content={`${volume}%`}
-            position="top"
-          />
+    <main className="container w-full h-full">
+      <div className="flex flex-row w-full justify-center">
+        <div className="volume-component flex flex-row items-center">
+          <div className="flex flex-column justify-content-between ">
+            {[100, 80, 60, 40, 20, 0].map((val) => (
+              <span className="flex justify-content-center bg-primary text-sm">
+                {val}
+              </span>
+            ))}
+          </div>
+          <div className="tick-col flex flex-column justify-between align-items-end">
+            {allTicks.map((_) => (
+              <hr className="separator m-2 flex justify-content-start" />
+            ))}
+          </div>
           <Slider
-            className="volume-slider"
+            orientation="vertical"
+            min={0}
+            max={100}
             value={volume}
-            onChange={(e: any) => setVolume(e.value)}
-          />{" "}
-          <i className="pi pi-volume-up text-xl text-cyan-100" />
+            onChange={(_, val) => setVolume(val as number)}
+            sx={{ height: "100%" }}
+          />
         </div>
         <div className="bpm-container">
-          <div className="display-component">
-            <DigitalDisplay value={bpm} fontSize="4rem" />
+          <div className="digital-component">
+            <DigitalNumber
+              nums={bpm.toString().padStart(3, "0")}
+              color="#ffffff"
+              unActiveColor="#22221e"
+              backgroundColor="transparent"
+              width={150}
+              height={80}
+            />
           </div>
           <div className="knob-component">
             <Knob
@@ -112,14 +129,14 @@ function App() {
               value={bpm}
               onChange={(value: any) => setBpm(parseInt(value))}
             >
-              <Scale tickWidth={2} tickHeight={2} radius={45} color="#ffff" />
-              <circle r="33" cx="75" cy="75" fill="#ffff" />
+              <Scale tickWidth={2} tickHeight={2} radius={70} color="#808080" />
+              <circle r="50" cx="75" cy="75" fill="#808080" />
               <Pointer
-                width={2}
+                width={3}
                 height={35}
-                radius={4}
+                radius={23}
                 type="rect"
-                color="#ffff"
+                color="#808080"
               />
 
               <text
@@ -127,7 +144,7 @@ function App() {
                 y="80"
                 textAnchor="middle"
                 fill="#000"
-                fontSize="15"
+                fontSize="20"
                 fontFamily="monospace"
                 fontWeight="bold"
                 style={{ userSelect: "none" }}
@@ -138,7 +155,7 @@ function App() {
           </div>
         </div>
       </div>
-      <div className="time-sig-component flex flex-row w-full">
+      <div className="time-sig-component flex flex-row w-full pt-3">
         <div className="dropdown-component w-4 pr-8">
           <Dropdown
             value={timeSig}
@@ -171,14 +188,15 @@ function App() {
         </div>
       </div>
       <br />
-      <button
-        onClick={() => {
-          toggleMetronome();
-        }}
-      >
-        {started ? "Stop" : "Start"}
-      </button>
-      <style></style>
+      <div>
+        <button
+          onClick={() => {
+            toggleMetronome();
+          }}
+        >
+          {started ? "Stop" : "Start"}
+        </button>
+      </div>
     </main>
   );
 }
