@@ -9,7 +9,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { TimeSignature } from "./types/timesignature";
 import { listen } from "@tauri-apps/api/event";
 import { Knob, Arc, Pointer, Value, Scale } from "rc-knob";
-//import { Slider } from "primereact/slider";
 import { Dropdown } from "primereact/dropdown";
 import DigitalNumber from "react-digital-number/dist/index.js";
 import Slider from "@mui/material/Slider";
@@ -83,119 +82,128 @@ function App() {
 
   return (
     <main className="container w-full h-full">
-      <div className="flex flex-row w-full justify-center">
-        <div className="volume-component flex flex-row items-center">
-          <div className="flex flex-column justify-content-between ">
-            {[100, 80, 60, 40, 20, 0].map((val) => (
-              <span className="flex justify-content-center bg-primary text-sm">
-                {val}
-              </span>
-            ))}
-          </div>
-          <div className="tick-col flex flex-column justify-between align-items-end">
-            {allTicks.map((_) => (
-              <hr className="separator m-2 flex justify-content-start" />
-            ))}
-          </div>
-          <Slider
-            orientation="vertical"
-            min={0}
-            max={100}
-            value={volume}
-            onChange={(_, val) => setVolume(val as number)}
-            sx={{ height: "100%" }}
-          />
-        </div>
-        <div className="bpm-container">
-          <div className="digital-component">
-            <DigitalNumber
-              nums={bpm.toString().padStart(3, "0")}
-              color="#ffffff"
-              unActiveColor="#22221e"
-              backgroundColor="transparent"
-              width={150}
-              height={80}
+      <div className="flex flex-row w-full justify-content-between">
+        <div className="flex flex-column w-2">
+          <div className="volume-component flex flex-row items-center">
+            <div className="flex flex-column justify-content-between ">
+              {[100, 80, 60, 40, 20, 0].map((val) => (
+                <span className="flex justify-content-center bg-primary text-sm">
+                  {val}
+                </span>
+              ))}
+            </div>
+            <div className="tick-col flex flex-column justify-between align-items-end">
+              {allTicks.map((_) => (
+                <hr className="separator m-2 flex justify-content-start" />
+              ))}
+            </div>
+            <Slider
+              orientation="vertical"
+              min={0}
+              max={100}
+              value={volume}
+              onChange={(_, val) => setVolume(val as number)}
+              sx={{ height: "100%" }}
             />
           </div>
-          <div className="knob-component">
-            <Knob
-              size={150}
-              angleOffset={250}
-              angleRange={220}
-              steps={200}
-              min={40}
-              max={240}
-              snap={true}
-              value={bpm}
-              onChange={(value: any) => setBpm(parseInt(value))}
-            >
-              <Scale tickWidth={2} tickHeight={2} radius={70} color="#808080" />
-              <circle r="50" cx="75" cy="75" fill="#808080" />
-              <Pointer
-                width={3}
-                height={35}
-                radius={23}
-                type="rect"
-                color="#808080"
+        </div>
+        <div className="flex flex-column  w-8">
+          <div className="bpm-container">
+            <div className="digital-component mb-6">
+              <DigitalNumber
+                nums={bpm.toString().padStart(3, "0")}
+                color="#ffffff"
+                unActiveColor="#22221e"
+                backgroundColor="transparent"
+                width={150}
+                height={80}
               />
-
-              <text
-                x="75"
-                y="80"
-                textAnchor="middle"
-                fill="#000"
-                fontSize="20"
-                fontFamily="monospace"
-                fontWeight="bold"
-                style={{ userSelect: "none" }}
+            </div>
+            <div className="knob-component mb-2">
+              <Knob
+                size={150}
+                angleOffset={250}
+                angleRange={220}
+                steps={200}
+                min={40}
+                max={240}
+                snap={true}
+                value={bpm}
+                onChange={(value: any) => setBpm(parseInt(value))}
               >
-                BPM
-              </text>
-            </Knob>
+                <Scale
+                  tickWidth={2}
+                  tickHeight={2}
+                  radius={70}
+                  color="#808080"
+                />
+                <circle r="50" cx="75" cy="75" fill="#808080" />
+                <Pointer
+                  width={3}
+                  height={35}
+                  radius={23}
+                  type="rect"
+                  color="#808080"
+                />
+
+                <text
+                  x="75"
+                  y="80"
+                  textAnchor="middle"
+                  fill="#000"
+                  fontSize="20"
+                  fontFamily="monospace"
+                  fontWeight="bold"
+                  style={{ userSelect: "none" }}
+                >
+                  BPM
+                </text>
+              </Knob>
+              <div className="beat-visualizer-component">
+                {[...Array(timeSig.top)].map((_, i) => (
+                  <svg key={i} width="50" height="50">
+                    <circle
+                      cx="15"
+                      cy="15"
+                      r="12"
+                      fill={
+                        beatIndex === i
+                          ? i === 0
+                            ? "#00ff5e"
+                            : "#ffffff"
+                          : "#999999"
+                      }
+                      stroke="#000"
+                      strokeWidth="1"
+                      style={{ transition: "fill 0.1s ease-in-out" }}
+                    />
+                  </svg>
+                ))}
+              </div>
+              <div className="button">
+                <button
+                  onClick={() => {
+                    toggleMetronome();
+                  }}
+                >
+                  {started ? "Stop" : "Start"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-      <div className="time-sig-component flex flex-row w-full pt-3">
-        <div className="dropdown-component w-4 pr-8">
-          <Dropdown
-            value={timeSig}
-            options={timeSigOptions}
-            onChange={(e) => {
-              setTimeSig(e.value);
-            }}
-          />
+
+        <div className="flex flex-column w-2 h-full">
+          <div className="dropdown-component">
+            <Dropdown
+              value={timeSig}
+              options={timeSigOptions}
+              onChange={(e) => {
+                setTimeSig(e.value);
+              }}
+            />
+          </div>
         </div>
-        <div className="beat-visualizer-component">
-          {[...Array(timeSig.top)].map((_, i) => (
-            <svg key={i} width="50" height="50">
-              <circle
-                cx="15"
-                cy="15"
-                r="12"
-                fill={
-                  beatIndex === i
-                    ? i === 0
-                      ? "#00ff5e"
-                      : "#ffffff"
-                    : "#999999"
-                }
-                stroke="#000"
-                strokeWidth="1"
-                style={{ transition: "fill 0.1s ease-in-out" }}
-              />
-            </svg>
-          ))}
-        </div>
-      </div>
-      <br />
-      <div>
-        <button
-          onClick={() => {
-            toggleMetronome();
-          }}
-        >
-          {started ? "Stop" : "Start"}
-        </button>
       </div>
     </main>
   );
